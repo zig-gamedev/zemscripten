@@ -1,0 +1,11 @@
+.{
+    .name = "zemscripten",
+    .version = "0.2.0-dev",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        "LICENSE",
+        "README.md",
+    },
+}
