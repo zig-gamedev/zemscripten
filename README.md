@@ -1,4 +1,4 @@
-# zemscripten
+# [zemscripten](https://github.com/zig-gamedev/zemscripten)
 
 Zig build package and shims for [Emscripten](https://emscripten.org) emsdk
 
