@@ -3,7 +3,7 @@ const std = @import("std");
 
 pub const emsdk_ver_major = "3";
 pub const emsdk_ver_minor = "1";
-pub const emsdk_ver_tiny = "70";
+pub const emsdk_ver_tiny = "73";
 pub const emsdk_version = emsdk_ver_major ++ "." ++ emsdk_ver_minor ++ "." ++ emsdk_ver_tiny;
 
 pub fn build(b: *std.Build) void {
@@ -132,7 +132,7 @@ pub fn emccStep(
         use_preload_plugins: bool = false,
         embed_paths: ?[]const EmccFilePath = null,
         preload_paths: ?[]const EmccFilePath = null,
-        shell_file_path: ?[]const u8 = "content/shell_minimal.html",
+        shell_file_path: ?[]const u8 = null,
         install_dir: std.Build.InstallDir,
     },
 ) *std.Build.Step {
