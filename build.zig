@@ -33,6 +33,13 @@ pub fn emrunPath(b: *std.Build) []const u8 {
     }) catch unreachable;
 }
 
+pub fn htmlPath(b: *std.Build) []const u8 {
+    return std.fs.path.join(b.allocator, &.{
+        b.dependency("emsdk", .{}).path("").getPath(b),
+        "upstream/emscripten/src/shell.html",
+    }) catch unreachable;
+}
+
 pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
     const emsdk_script_path = std.fs.path.join(b.allocator, &.{
         b.dependency("emsdk", .{}).path("").getPath(b),
