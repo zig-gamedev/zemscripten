@@ -45,7 +45,7 @@ Add zemscripten's "root" module to your wasm compile target., then create an `em
             .embed_paths = &.{},
             .preload_paths = &.{},
             .install_dir = .{ .custom = "web" },
-            .shell_file_path = "content/shell.html",
+            .shell_file_path = @import("zemscripten").htmlPath(b),
         },
     );
     emcc_step.dependOn(activate_emsdk_step);
