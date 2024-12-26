@@ -153,9 +153,8 @@ pub fn emccStep(
 
     emcc.addArtifactArg(wasm);
     {
-        var it = wasm.root_module.iterateDependencies(wasm, false);
-        while (it.next()) |item| {
-            for (item.module.link_objects.items) |link_object| {
+        for (wasm.root_module.import_table.values()) |module| {
+            for (module.link_objects.items) |link_object| {
                 switch (link_object) {
                     .other_step => |compile_step| {
                         switch (compile_step.kind) {
