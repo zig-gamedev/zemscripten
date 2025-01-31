@@ -70,9 +70,9 @@ pub fn getElementCssSize(
 }
 extern fn emscripten_get_element_css_size([*:0]const u8, *f64, *f64) c_int;
 
-/// EmmalocAllocator allocator
-/// use with linker flag -sMALLOC=emmalloc
-/// for details see docs: https://github.com/emscripten-core/emscripten/blob/main/system/lib/emmalloc.c
+// EmmalocAllocator allocator
+// use with linker flag -sMALLOC=emmalloc
+// for details see docs: https://github.com/emscripten-core/emscripten/blob/main/system/lib/emmalloc.c
 extern fn emmalloc_memalign(u32, u32) ?*anyopaque;
 extern fn emmalloc_realloc_try(?*anyopaque, u32) ?*anyopaque;
 extern fn emmalloc_free(?*anyopaque) void;

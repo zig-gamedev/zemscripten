@@ -45,12 +45,29 @@ Add zemscripten's "root" module to your wasm compile target., then create an `em
             .embed_paths = &.{},
             .preload_paths = &.{},
             .install_dir = .{ .custom = "web" },
-            .shell_file_path = @import("zemscripten").htmlPath(b),
         },
     );
     emcc_step.dependOn(activate_emsdk_step);
 
     b.getInstallStep().dependOn(emcc_step);
+```
+
+To use a custom html file emccStep() accepts a shell_file_path option:
+```zig
+    const emcc_step = @import("zemscripten").emccStep(
+        b,
+        wasm,
+        .{
+            .optimize = optimize,
+            .flags = emcc_flags,
+            .settings = emcc_settings,
+            .use_preload_plugins = true,
+            .embed_paths = &.{},
+            .preload_paths = &.{},
+            .install_dir = .{ .custom = "web" },
+            .shell_file_path = "path/to/file"
+        },
+    );
 ```
 
 Now you can use the provided Zig panic and log overrides in your wasm's root module and define the entry point that invoked by the js output of `emcc` (by default it looks for a symbol named `main`). For example:
@@ -86,3 +103,4 @@ You can also define a run step that invokes `emrun`. This will serve the html lo
     b.step("emrun", "Build and open the web app locally using emrun").dependOn(emrun_step);
 ```
 See the [emrun documentation](https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html) for the difference args that can be used.
+
