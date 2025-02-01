@@ -5,7 +5,6 @@
         "build.zig",
         "build.zig.zon",
         "src",
-        "content",
         "LICENSE",
         "README.md",
     },

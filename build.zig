@@ -85,9 +85,14 @@ pub const EmccFlags = std.StringHashMap(void);
 
 pub fn emccDefaultFlags(allocator: std.mem.Allocator, optimize: std.builtin.OptimizeMode) EmccFlags {
     var args = EmccFlags.init(allocator);
-    if (optimize == .Debug) {
-        args.put("-Og", {}) catch unreachable;
-        args.put("-gsource-map", {}) catch unreachable;
+    switch (optimize) {
+        .Debug => {
+            args.put("-gsource-map", {}) catch unreachable;
+        },
+        .ReleaseSmall, .ReleaseFast => {
+            args.put("-O3", {}) catch unreachable;
+        },
+        else => {},
     }
     return args;
 }
