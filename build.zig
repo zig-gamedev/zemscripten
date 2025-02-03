@@ -3,7 +3,7 @@ const std = @import("std");
 
 pub const emsdk_ver_major = "3";
 pub const emsdk_ver_minor = "1";
-pub const emsdk_ver_tiny = "52";
+pub const emsdk_ver_tiny = "73";
 pub const emsdk_version = emsdk_ver_major ++ "." ++ emsdk_ver_minor ++ "." ++ emsdk_ver_tiny;
 
 pub fn build(b: *std.Build) void {
@@ -29,6 +29,13 @@ pub fn emrunPath(b: *std.Build) []const u8 {
             .windows => "emrun.bat",
             else => "emrun",
         },
+    }) catch unreachable;
+}
+
+pub fn htmlPath(b: *std.Build) []const u8 {
+    return std.fs.path.join(b.allocator, &.{
+        b.dependency("emsdk", .{}).path("").getPath(b),
+        "upstream/emscripten/src/shell.html",
     }) catch unreachable;
 }
 
@@ -77,9 +84,14 @@ pub const EmccFlags = std.StringHashMap(void);
 
 pub fn emccDefaultFlags(allocator: std.mem.Allocator, optimize: std.builtin.OptimizeMode) EmccFlags {
     var args = EmccFlags.init(allocator);
-    if (optimize == .Debug) {
-        args.put("-Og", {}) catch unreachable;
-        args.put("-gsource-map", {}) catch unreachable;
+    switch (optimize) {
+        .Debug => {
+            args.put("-gsource-map", {}) catch unreachable;
+        },
+        .ReleaseSmall, .ReleaseFast => {
+            args.put("-O3", {}) catch unreachable;
+        },
+        else => {},
     }
     return args;
 }
