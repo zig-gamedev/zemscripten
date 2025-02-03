@@ -8,7 +8,6 @@ pub const emsdk_version = emsdk_ver_major ++ "." ++ emsdk_ver_minor ++ "." ++ em
 
 pub fn build(b: *std.Build) void {
     _ = b.addModule("root", .{ .root_source_file = b.path("src/zemscripten.zig") });
-    _ = b.addModule("dummy", .{ .root_source_file = b.path("src/dummy.zig") });
 }
 
 pub fn emccPath(b: *std.Build) []const u8 {
