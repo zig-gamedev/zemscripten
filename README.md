@@ -6,7 +6,7 @@ Zig build package and shims for [Emscripten](https://emscripten.org) emsdk
 
 Add `zemscripten` and (optionally) `emsdk` to your build.zig.zon dependencies
 ```sh
-    zig fetch --save https://github.com/emscripten-core/emsdk/archive/refs/tags/3.1.52.tar.gz
+    zig fetch --save https://github.com/emscripten-core/emsdk/archive/refs/tags/3.1.73.tar.gz
 ```
 
 Emsdk must be activated before it can be used. You can use `activateEmsdkStep` to create a build step for that:
