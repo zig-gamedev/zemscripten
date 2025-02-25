@@ -1,9 +1,9 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-pub const emsdk_ver_major = "3";
-pub const emsdk_ver_minor = "1";
-pub const emsdk_ver_tiny = "73";
+pub const emsdk_ver_major = "4";
+pub const emsdk_ver_minor = "0";
+pub const emsdk_ver_tiny = "3";
 pub const emsdk_version = emsdk_ver_major ++ "." ++ emsdk_ver_minor ++ "." ++ emsdk_ver_tiny;
 
 pub fn build(b: *std.Build) void {
