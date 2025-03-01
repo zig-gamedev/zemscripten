@@ -60,12 +60,6 @@ pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
     var emsdk_activate = b.addSystemCommand(&.{ emsdk_script_path, "activate", emsdk_version });
     emsdk_activate.step.dependOn(&emsdk_install.step);
 
-    const chmod_emcc = b.addSystemCommand(&.{ "chmod", "+x", emccPath(b) });
-    chmod_emcc.step.dependOn(&emsdk_activate.step);
-
-    const chmod_emrun = b.addSystemCommand(&.{ "chmod", "+x", emrunPath(b) });
-    chmod_emrun.step.dependOn(&emsdk_activate.step);
-
     const step = b.allocator.create(std.Build.Step) catch unreachable;
     step.* = std.Build.Step.init(.{
         .id = .custom,
@@ -75,8 +69,21 @@ pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
             fn make(_: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {}
         }.make,
     });
-    step.dependOn(&chmod_emcc.step);
-    step.dependOn(&chmod_emrun.step);
+
+    switch (builtin.target.os.tag) {
+        .linux, .macos => {
+            const chmod_emcc = b.addSystemCommand(&.{ "chmod", "+x", emccPath(b) });
+            chmod_emcc.step.dependOn(&emsdk_activate.step);
+
+            const chmod_emrun = b.addSystemCommand(&.{ "chmod", "+x", emrunPath(b) });
+            chmod_emrun.step.dependOn(&emsdk_activate.step);
+
+            step.dependOn(&chmod_emcc.step);
+            step.dependOn(&chmod_emrun.step);
+        },
+        else => {},
+    }
+
     return step;
 }
 
@@ -165,7 +172,7 @@ pub fn emccStep(
 
     emcc.addArtifactArg(wasm);
     {
-        for (wasm.root_module.import_table.values()) |module| {
+        for (wasm.root_module.getGraph().modules) |module| {
             for (module.link_objects.items) |link_object| {
                 switch (link_object) {
                     .other_step => |compile_step| {
