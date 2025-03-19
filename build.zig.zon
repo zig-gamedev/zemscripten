@@ -1,5 +1,6 @@
 .{
-    .name = "zemscripten",
+    .name = .zemscripten,
+    .fingerprint = 0x2de6d80ca84319b1, // Changing this has security and trust implications.
     .version = "0.2.0-dev",
     .paths = .{
         "build.zig",
