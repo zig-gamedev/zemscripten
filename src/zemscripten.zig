@@ -14,6 +14,17 @@ pub fn setMainLoop(cb: MainLoopCallback, maybe_fps: ?i16, simulate_infinite_loop
     emscripten_set_main_loop(cb, if (maybe_fps) |fps| fps else -1, @intFromBool(simulate_infinite_loop));
 }
 
+extern fn emscripten_cancel_main_loop() void;
+pub fn cancelMainLoop() void {
+    emscripten_cancel_main_loop();
+}
+
+pub const MainLoopArgCallback = *const fn (arg: *anyopaque) callconv(.C) void;
+extern fn emscripten_set_main_loop_arg(MainLoopArgCallback, arg: *anyopaque, c_int, c_int) void;
+pub fn setMainLoopArg(cb: MainLoopArgCallback, arg: *anyopaque, maybe_fps: ?i16, simulate_infinite_loop: bool) void {
+    emscripten_set_main_loop_arg(cb, arg, if (maybe_fps) |fps| fps else -1, @intFromBool(simulate_infinite_loop));
+}
+
 pub const AnimationFrameCallback = *const fn (f64, ?*anyopaque) callconv(.C) c_int;
 extern fn emscripten_request_animation_frame_loop(AnimationFrameCallback, ?*anyopaque) void;
 pub const requestAnimationFrameLoop = emscripten_request_animation_frame_loop;
