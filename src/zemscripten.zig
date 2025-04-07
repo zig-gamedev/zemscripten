@@ -86,6 +86,7 @@ pub const EmmalocAllocator = struct {
             .vtable = &.{
                 .alloc = &alloc,
                 .resize = &resize,
+                .remap = &remap,
                 .free = &free,
             },
         };
@@ -94,12 +95,12 @@ pub const EmmalocAllocator = struct {
     fn alloc(
         ctx: *anyopaque,
         len: usize,
-        ptr_align_log2: u8,
+        ptr_align_log2: std.mem.Alignment,
         return_address: usize,
     ) ?[*]u8 {
         _ = ctx;
         _ = return_address;
-        const ptr_align: u32 = @as(u32, 1) << @as(u5, @intCast(ptr_align_log2));
+        const ptr_align: u32 = @as(u32, 1) << @as(u5, @intFromEnum(ptr_align_log2));
         if (!std.math.isPowerOfTwo(ptr_align)) unreachable;
         const ptr = emmalloc_memalign(ptr_align, len) orelse return null;
         return @ptrCast(ptr);
@@ -108,7 +109,7 @@ pub const EmmalocAllocator = struct {
     fn resize(
         ctx: *anyopaque,
         buf: []u8,
-        buf_align_log2: u8,
+        buf_align_log2: std.mem.Alignment,
         new_len: usize,
         return_address: usize,
     ) bool {
@@ -118,10 +119,20 @@ pub const EmmalocAllocator = struct {
         return emmalloc_realloc_try(buf.ptr, new_len) != null;
     }
 
+    fn remap(
+        ctx: *anyopaque,
+        buf: []u8,
+        buf_align_log2: std.mem.Alignment,
+        new_len: usize,
+        return_address: usize,
+    ) ?[*]u8 {
+        return if (resize(ctx, buf, buf_align_log2, new_len, return_address)) buf.ptr else null;
+    }
+
     fn free(
         ctx: *anyopaque,
         buf: []u8,
-        buf_align_log2: u8,
+        buf_align_log2: std.mem.Alignment,
         return_address: usize,
     ) void {
         _ = ctx;
