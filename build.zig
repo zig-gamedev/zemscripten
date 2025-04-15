@@ -89,16 +89,31 @@ pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
 
 pub const EmccFlags = std.StringHashMap(void);
 
-pub fn emccDefaultFlags(allocator: std.mem.Allocator, optimize: std.builtin.OptimizeMode) EmccFlags {
+pub fn emccDefaultFlags(allocator: std.mem.Allocator, options: struct {
+    optimize: std.builtin.OptimizeMode,
+    fsanitize: bool,
+}) EmccFlags {
     var args = EmccFlags.init(allocator);
-    switch (optimize) {
+    switch (options.optimize) {
         .Debug => {
+            args.put("-O0", {}) catch unreachable;
             args.put("-gsource-map", {}) catch unreachable;
+            if (options.fsanitize)
+                args.put("-fsanitize=undefined", {}) catch unreachable;
         },
-        .ReleaseSmall, .ReleaseFast => {
+        .ReleaseSafe => {
+            args.put("-O3", {}) catch unreachable;
+            if (options.fsanitize) {
+                args.put("-fsanitize=undefined", {}) catch unreachable;
+                args.put("-fsanitize-minimal-runtime", {}) catch unreachable;
+            }
+        },
+        .ReleaseFast => {
             args.put("-O3", {}) catch unreachable;
         },
-        else => {},
+        .ReleaseSmall => {
+            args.put("-Oz", {}) catch unreachable;
+        },
     }
     return args;
 }
