@@ -197,3 +197,25 @@ pub fn log(
         else => emscripten_console_log(@ptrCast(msg.ptr)),
     }
 }
+
+// Networking
+extern fn emscripten_wget(url: [*c]const u8, file: [*c]const u8) c_int;
+extern fn emscripten_wget_data(url: [*c]const u8, pbuffer: **anyopaque, pnum: *c_int, perror: *c_int) void;
+
+pub fn Wget(url: []const u8, file: []const u8) c_int {
+    return emscripten_wget(url.ptr, file.ptr);
+}
+
+pub fn WgetData(url: []const u8) ![]u8 {
+    var buffer_ptr: *anyopaque = undefined;
+    var len: c_int = undefined;
+    var err: c_int = undefined;
+
+    emscripten_wget_data(url.ptr, &buffer_ptr, &len, &err);
+
+    if (err != 0) {
+        return error.WgetError;
+    }
+
+    return @as([*]u8, @ptrCast(buffer_ptr))[0..@intCast(len)];
+}
