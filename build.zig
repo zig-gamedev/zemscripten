@@ -59,6 +59,9 @@ pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
         .linux, .macos => {
             emsdk_install.step.dependOn(&b.addSystemCommand(&.{ "chmod", "+x", emsdk_script_path }).step);
         },
+        .windows => {
+            emsdk_install.step.dependOn(&b.addSystemCommand(&.{ "takeown", "/f", emsdk_script_path }).step);
+        },
         else => {},
     }
 
@@ -79,12 +82,20 @@ pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
         .linux, .macos => {
             const chmod_emcc = b.addSystemCommand(&.{ "chmod", "+x", emccPath(b) });
             chmod_emcc.step.dependOn(&emsdk_activate.step);
+            step.dependOn(&chmod_emcc.step);
 
             const chmod_emrun = b.addSystemCommand(&.{ "chmod", "+x", emrunPath(b) });
             chmod_emrun.step.dependOn(&emsdk_activate.step);
-
-            step.dependOn(&chmod_emcc.step);
             step.dependOn(&chmod_emrun.step);
+        },
+        .windows => {
+            const takeown_emcc = b.addSystemCommand(&.{ "takeown", "/f", emccPath(b) });
+            takeown_emcc.step.dependOn(&emsdk_activate.step);
+            step.dependOn(&takeown_emcc.step);
+
+            const takeown_emrun = b.addSystemCommand(&.{ "takeown", "/f", emrunPath(b) });
+            takeown_emrun.step.dependOn(&emsdk_activate.step);
+            step.dependOn(&takeown_emrun.step);
         },
         else => {},
     }
