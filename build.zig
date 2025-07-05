@@ -1,4 +1,6 @@
 const builtin = @import("builtin");
+const host_os = builtin.target.os.tag;
+
 const std = @import("std");
 
 pub const emsdk_ver_major = "4";
@@ -15,7 +17,7 @@ pub fn emccPath(b: *std.Build) []const u8 {
         b.dependency("emsdk", .{}).path("").getPath(b),
         "upstream",
         "emscripten",
-        switch (builtin.target.os.tag) {
+        switch (host_os) {
             .windows => "emcc.bat",
             else => "emcc",
         },
@@ -27,7 +29,7 @@ pub fn emrunPath(b: *std.Build) []const u8 {
         b.dependency("emsdk", .{}).path("").getPath(b),
         "upstream",
         "emscripten",
-        switch (builtin.target.os.tag) {
+        switch (host_os) {
             .windows => "emrun.bat",
             else => "emrun",
         },
@@ -47,7 +49,7 @@ pub fn htmlPath(b: *std.Build) []const u8 {
 pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
     const emsdk_script_path = std.fs.path.join(b.allocator, &.{
         b.dependency("emsdk", .{}).path("").getPath(b),
-        switch (builtin.target.os.tag) {
+        switch (host_os) {
             .windows => "emsdk.bat",
             else => "emsdk",
         },
@@ -55,7 +57,7 @@ pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
 
     var emsdk_install = b.addSystemCommand(&.{ emsdk_script_path, "install", emsdk_version });
 
-    switch (builtin.target.os.tag) {
+    switch (host_os) {
         .linux, .macos => {
             emsdk_install.step.dependOn(&b.addSystemCommand(&.{ "chmod", "+x", emsdk_script_path }).step);
         },
@@ -78,7 +80,7 @@ pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
         }.make,
     });
 
-    switch (builtin.target.os.tag) {
+    switch (host_os) {
         .linux, .macos => {
             const chmod_emcc = b.addSystemCommand(&.{ "chmod", "+x", emccPath(b) });
             chmod_emcc.step.dependOn(&emsdk_activate.step);
@@ -89,12 +91,25 @@ pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
             step.dependOn(&chmod_emrun.step);
         },
         .windows => {
+            const windows_wait_step = b.allocator.create(std.Build.Step) catch unreachable;
+            windows_wait_step.* = std.Build.Step.init(.{
+                .id = .custom,
+                .name = "Wait for a sceond",
+                .owner = b,
+                .makeFn = &struct {
+                    fn make(_: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {
+                        std.time.sleep(std.time.ns_per_s * 1);
+                    }
+                }.make,
+            });
+            windows_wait_step.dependOn(&emsdk_activate.step);
+
             const takeown_emcc = b.addSystemCommand(&.{ "takeown", "/f", emccPath(b) });
-            takeown_emcc.step.dependOn(&emsdk_activate.step);
+            takeown_emcc.step.dependOn(windows_wait_step);
             step.dependOn(&takeown_emcc.step);
 
             const takeown_emrun = b.addSystemCommand(&.{ "takeown", "/f", emrunPath(b) });
-            takeown_emrun.step.dependOn(&emsdk_activate.step);
+            takeown_emrun.step.dependOn(windows_wait_step);
             step.dependOn(&takeown_emrun.step);
         },
         else => {},
