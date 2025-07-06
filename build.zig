@@ -120,10 +120,12 @@ pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
 
 pub const EmccFlags = std.StringHashMap(void);
 
-pub fn emccDefaultFlags(allocator: std.mem.Allocator, options: struct {
+pub const FlagsOptions = struct {
     optimize: std.builtin.OptimizeMode,
     fsanitize: bool,
-}) EmccFlags {
+};
+
+pub fn emccDefaultFlags(allocator: std.mem.Allocator, options: FlagsOptions) EmccFlags {
     var args = EmccFlags.init(allocator);
     switch (options.optimize) {
         .Debug => {
@@ -151,22 +153,22 @@ pub fn emccDefaultFlags(allocator: std.mem.Allocator, options: struct {
 
 pub const EmccSettings = std.StringHashMap([]const u8);
 
-pub fn emccDefaultSettings(
-    allocator: std.mem.Allocator,
-    options: struct {
-        optimize: std.builtin.OptimizeMode,
-        emsdk_allocator: enum {
-            none,
-            dlmalloc,
-            emmalloc,
-            @"emmalloc-debug",
-            @"emmalloc-memvalidate",
-            @"emmalloc-verbose",
-            mimalloc,
-        } = .emmalloc,
-        shell_file: ?[]const u8 = null,
-    },
-) EmccSettings {
+pub const EmsdkAllocator = enum {
+    none,
+    dlmalloc,
+    emmalloc,
+    @"emmalloc-debug",
+    @"emmalloc-memvalidate",
+    @"emmalloc-verbose",
+    mimalloc,
+};
+
+pub const SettingsOptions = struct {
+    optimize: std.builtin.OptimizeMode,
+    emsdk_allocator: EmsdkAllocator = .emmalloc,
+};
+
+pub fn emccDefaultSettings(allocator: std.mem.Allocator, options: SettingsOptions) EmccSettings {
     var settings = EmccSettings.init(allocator);
     switch (options.optimize) {
         .Debug, .ReleaseSafe => {
@@ -186,19 +188,21 @@ pub const EmccFilePath = struct {
     virtual_path: ?[]const u8 = null,
 };
 
+pub const StepOptions = struct {
+    optimize: std.builtin.OptimizeMode,
+    flags: EmccFlags,
+    settings: EmccSettings,
+    use_preload_plugins: bool = false,
+    embed_paths: ?[]const EmccFilePath = null,
+    preload_paths: ?[]const EmccFilePath = null,
+    shell_file_path: ?[]const u8 = null,
+    install_dir: std.Build.InstallDir,
+};
+
 pub fn emccStep(
     b: *std.Build,
     wasm: *std.Build.Step.Compile,
-    options: struct {
-        optimize: std.builtin.OptimizeMode,
-        flags: EmccFlags,
-        settings: EmccSettings,
-        use_preload_plugins: bool = false,
-        embed_paths: ?[]const EmccFilePath = null,
-        preload_paths: ?[]const EmccFilePath = null,
-        shell_file_path: ?[]const u8 = null,
-        install_dir: std.Build.InstallDir,
-    },
+    options: StepOptions,
 ) *std.Build.Step {
     var emcc = b.addSystemCommand(&.{emccPath(b)});
 
