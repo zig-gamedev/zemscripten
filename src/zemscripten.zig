@@ -8,7 +8,7 @@ comptime {
 
 pub extern fn emscripten_sleep(ms: u32) void;
 
-pub const MainLoopCallback = *const fn () callconv(.C) void;
+pub const MainLoopCallback = *const fn () callconv(.c) void;
 extern fn emscripten_set_main_loop(MainLoopCallback, c_int, c_int) void;
 pub fn setMainLoop(cb: MainLoopCallback, maybe_fps: ?i16, simulate_infinite_loop: bool) void {
     emscripten_set_main_loop(cb, if (maybe_fps) |fps| fps else -1, @intFromBool(simulate_infinite_loop));
@@ -19,13 +19,13 @@ pub fn cancelMainLoop() void {
     emscripten_cancel_main_loop();
 }
 
-pub const MainLoopArgCallback = *const fn (arg: *anyopaque) callconv(.C) void;
+pub const MainLoopArgCallback = *const fn (arg: *anyopaque) callconv(.c) void;
 extern fn emscripten_set_main_loop_arg(MainLoopArgCallback, arg: *anyopaque, c_int, c_int) void;
 pub fn setMainLoopArg(cb: MainLoopArgCallback, arg: *anyopaque, maybe_fps: ?i16, simulate_infinite_loop: bool) void {
     emscripten_set_main_loop_arg(cb, arg, if (maybe_fps) |fps| fps else -1, @intFromBool(simulate_infinite_loop));
 }
 
-pub const AnimationFrameCallback = *const fn (f64, ?*anyopaque) callconv(.C) c_int;
+pub const AnimationFrameCallback = *const fn (f64, ?*anyopaque) callconv(.c) c_int;
 extern fn emscripten_request_animation_frame_loop(AnimationFrameCallback, ?*anyopaque) void;
 pub const requestAnimationFrameLoop = emscripten_request_animation_frame_loop;
 
@@ -45,7 +45,7 @@ pub const CanvasSizeChangedCallback = *const fn (
     i16,
     *anyopaque,
     ?*anyopaque,
-) callconv(.C) c_int;
+) callconv(.c) c_int;
 pub fn setResizeCallback(
     cb: CanvasSizeChangedCallback,
     use_capture: bool,
