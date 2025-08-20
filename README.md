@@ -27,7 +27,7 @@ Add zemscripten's "root" module to your wasm compile target., then create an `em
     wasm.root_module.addImport("zemscripten", zemscripten.module("root"));
 
     const emcc_flags = @import("zemscripten").emccDefaultFlags(b.allocator, optimize);
-    
+
     var emcc_settings = @import("zemscripten").emccDefaultSettings(b.allocator, .{
         .optimize = optimize,
     });
@@ -65,7 +65,7 @@ To use a custom html file emccStep() accepts a shell_file_path option:
             .embed_paths = &.{},
             .preload_paths = &.{},
             .install_dir = .{ .custom = "web" },
-            .shell_file_path = "path/to/file"
+            .shell_file_path = b.path("path/to/file"),
         },
     );
 ```
@@ -103,4 +103,3 @@ You can also define a run step that invokes `emrun`. This will serve the html lo
     b.step("emrun", "Build and open the web app locally using emrun").dependOn(emrun_step);
 ```
 See the [emrun documentation](https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html) for the difference args that can be used.
-
