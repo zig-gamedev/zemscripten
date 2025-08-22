@@ -8,7 +8,7 @@ comptime {
 
 pub extern fn emscripten_sleep(ms: u32) void;
 
-pub const MainLoopCallback = *const fn () callconv(.C) void;
+pub const MainLoopCallback = *const fn () callconv(.c) void;
 extern fn emscripten_set_main_loop(MainLoopCallback, c_int, c_int) void;
 pub fn setMainLoop(cb: MainLoopCallback, maybe_fps: ?i16, simulate_infinite_loop: bool) void {
     emscripten_set_main_loop(cb, if (maybe_fps) |fps| fps else -1, @intFromBool(simulate_infinite_loop));
@@ -19,13 +19,13 @@ pub fn cancelMainLoop() void {
     emscripten_cancel_main_loop();
 }
 
-pub const MainLoopArgCallback = *const fn (arg: *anyopaque) callconv(.C) void;
+pub const MainLoopArgCallback = *const fn (arg: *anyopaque) callconv(.c) void;
 extern fn emscripten_set_main_loop_arg(MainLoopArgCallback, arg: *anyopaque, c_int, c_int) void;
 pub fn setMainLoopArg(cb: MainLoopArgCallback, arg: *anyopaque, maybe_fps: ?i16, simulate_infinite_loop: bool) void {
     emscripten_set_main_loop_arg(cb, arg, if (maybe_fps) |fps| fps else -1, @intFromBool(simulate_infinite_loop));
 }
 
-pub const AnimationFrameCallback = *const fn (f64, ?*anyopaque) callconv(.C) c_int;
+pub const AnimationFrameCallback = *const fn (f64, ?*anyopaque) callconv(.c) c_int;
 extern fn emscripten_request_animation_frame_loop(AnimationFrameCallback, ?*anyopaque) void;
 pub const requestAnimationFrameLoop = emscripten_request_animation_frame_loop;
 
@@ -45,7 +45,7 @@ pub const CanvasSizeChangedCallback = *const fn (
     i16,
     *anyopaque,
     ?*anyopaque,
-) callconv(.C) c_int;
+) callconv(.c) c_int;
 pub fn setResizeCallback(
     cb: CanvasSizeChangedCallback,
     use_capture: bool,
@@ -81,13 +81,13 @@ pub fn getElementCssSize(
 }
 extern fn emscripten_get_element_css_size([*:0]const u8, *f64, *f64) c_int;
 
-// EmmalocAllocator allocator
+// EmmallocAllocator allocator
 // use with linker flag -sMALLOC=emmalloc
 // for details see docs: https://github.com/emscripten-core/emscripten/blob/main/system/lib/emmalloc.c
 extern fn emmalloc_memalign(u32, u32) ?*anyopaque;
 extern fn emmalloc_realloc_try(?*anyopaque, u32) ?*anyopaque;
 extern fn emmalloc_free(?*anyopaque) void;
-pub const EmmalocAllocator = struct {
+pub const EmmallocAllocator = struct {
     const Self = @This();
     dummy: u32 = undefined,
 
