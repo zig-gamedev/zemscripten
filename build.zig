@@ -181,7 +181,7 @@ pub fn emccStep(
         use_preload_plugins: bool = false,
         embed_paths: ?[]const EmccFilePath = null,
         preload_paths: ?[]const EmccFilePath = null,
-        shell_file_path: ?[]const u8 = null,
+        shell_file_path: ?std.Build.LazyPath = null,
         install_dir: std.Build.InstallDir,
     },
 ) *std.Build.Step {
@@ -256,7 +256,9 @@ pub fn emccStep(
     }
 
     if (options.shell_file_path) |shell_file_path| {
-        emcc.addArgs(&.{ "--shell-file", shell_file_path });
+        emcc.addArg("--shell-file");
+        emcc.addFileArg(shell_file_path);
+        emcc.addFileInput(shell_file_path);
     }
 
     const install_step = b.addInstallDirectory(.{
