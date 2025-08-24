@@ -206,7 +206,7 @@ pub fn Wget(url: []const u8, file: []const u8) c_int {
     return emscripten_wget(url.ptr, file.ptr);
 }
 
-pub fn WgetData(url: []const u8) ![]u8 {
+pub fn WgetData(url: [:0]const u8) ![]u8 {
     var buffer_ptr: *anyopaque = undefined;
     var len: c_int = undefined;
     var err: c_int = undefined;
