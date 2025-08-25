@@ -202,11 +202,11 @@ pub fn log(
 extern fn emscripten_wget(url: [*c]const u8, file: [*c]const u8) c_int;
 extern fn emscripten_wget_data(url: [*c]const u8, pbuffer: **anyopaque, pnum: *c_int, perror: *c_int) void;
 
-pub fn Wget(url: [:0]const u8, file: [:0]const u8) c_int {
+pub fn wget(url: [:0]const u8, file: [:0]const u8) c_int {
     return emscripten_wget(url.ptr, file.ptr);
 }
 
-pub fn WgetData(url: [:0]const u8) ![]u8 {
+pub fn wget_data(url: [:0]const u8) ![]u8 {
     var buffer_ptr: *anyopaque = undefined;
     var len: c_int = undefined;
     var err: c_int = undefined;
