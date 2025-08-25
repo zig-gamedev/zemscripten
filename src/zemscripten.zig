@@ -202,7 +202,7 @@ pub fn log(
 extern fn emscripten_wget(url: [*c]const u8, file: [*c]const u8) c_int;
 extern fn emscripten_wget_data(url: [*c]const u8, pbuffer: **anyopaque, pnum: *c_int, perror: *c_int) void;
 
-pub fn Wget(url: []const u8, file: []const u8) c_int {
+pub fn Wget(url: [:0]const u8, file: [:0]const u8) c_int {
     return emscripten_wget(url.ptr, file.ptr);
 }
 
