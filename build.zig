@@ -182,6 +182,7 @@ pub const StepOptions = struct {
     embed_paths: ?[]const EmccFilePath = null,
     preload_paths: ?[]const EmccFilePath = null,
     shell_file_path: ?std.Build.LazyPath = null,
+    out_file_name: ?[]const u8 = null,
     install_dir: std.Build.InstallDir,
 };
 
@@ -226,7 +227,13 @@ pub fn emccStep(
     }
 
     emcc.addArg("-o");
-    const out_file = emcc.addOutputFileArg(b.fmt("{s}.html", .{wasm.name}));
+    const out_file = out_file: {
+        if (options.out_file_name) |out_file_name| {
+            break :out_file emcc.addOutputFileArg(out_file_name);
+        } else {
+            break :out_file emcc.addOutputFileArg(b.fmt("{s}.html", .{wasm.name}));
+        }
+    };
 
     if (options.use_preload_plugins) {
         emcc.addArg("--use-preload-plugins");
