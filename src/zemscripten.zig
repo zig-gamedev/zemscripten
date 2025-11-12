@@ -11,7 +11,7 @@ pub extern fn emscripten_sleep(ms: u32) void;
 pub const MainLoopCallback = *const fn () callconv(.c) void;
 extern fn emscripten_set_main_loop(MainLoopCallback, c_int, c_int) void;
 pub fn setMainLoop(cb: MainLoopCallback, maybe_fps: ?i16, simulate_infinite_loop: bool) void {
-    emscripten_set_main_loop(cb, if (maybe_fps) |fps| fps else -1, @intFromBool(simulate_infinite_loop));
+    emscripten_set_main_loop(cb, maybe_fps orelse -1, @intFromBool(simulate_infinite_loop));
 }
 
 extern fn emscripten_cancel_main_loop() void;
@@ -22,7 +22,7 @@ pub fn cancelMainLoop() void {
 pub const MainLoopArgCallback = *const fn (arg: *anyopaque) callconv(.c) void;
 extern fn emscripten_set_main_loop_arg(MainLoopArgCallback, arg: *anyopaque, c_int, c_int) void;
 pub fn setMainLoopArg(cb: MainLoopArgCallback, arg: *anyopaque, maybe_fps: ?i16, simulate_infinite_loop: bool) void {
-    emscripten_set_main_loop_arg(cb, arg, if (maybe_fps) |fps| fps else -1, @intFromBool(simulate_infinite_loop));
+    emscripten_set_main_loop_arg(cb, arg, maybe_fps orelse -1, @intFromBool(simulate_infinite_loop));
 }
 
 pub const AnimationFrameCallback = *const fn (f64, ?*anyopaque) callconv(.c) c_int;
@@ -111,9 +111,8 @@ pub const EmmallocAllocator = struct {
     ) ?[*]u8 {
         _ = ctx;
         _ = return_address;
-        const ptr_align: u32 = @as(u32, 1) << @as(u5, @intFromEnum(ptr_align_log2));
-        if (!std.math.isPowerOfTwo(ptr_align)) unreachable;
-        const ptr = emmalloc_memalign(ptr_align, len) orelse return null;
+        const ptr_align = ptr_align_log2.toByteUnits();
+        const ptr = emmalloc_memalign(@intCast(ptr_align), @intCast(len)) orelse return null;
         return @ptrCast(ptr);
     }
 
@@ -127,7 +126,7 @@ pub const EmmallocAllocator = struct {
         _ = ctx;
         _ = return_address;
         _ = buf_align_log2;
-        return emmalloc_realloc_try(buf.ptr, new_len) != null;
+        return emmalloc_realloc_try(buf.ptr, @intCast(new_len)) != null;
     }
 
     fn remap(

@@ -151,7 +151,6 @@ pub const EmsdkAllocator = enum {
 pub const EmccDefaultSettingsOverrides = struct {
     optimize: std.builtin.OptimizeMode,
     emsdk_allocator: EmsdkAllocator = .emmalloc,
-    shell_file: ?[]const u8 = null,
 };
 
 pub fn emccDefaultSettings(allocator: std.mem.Allocator, options: EmccDefaultSettingsOverrides) EmccSettings {
@@ -182,6 +181,7 @@ pub const StepOptions = struct {
     embed_paths: ?[]const EmccFilePath = null,
     preload_paths: ?[]const EmccFilePath = null,
     shell_file_path: ?std.Build.LazyPath = null,
+    js_library_path: ?std.Build.LazyPath = null,
     out_file_name: ?[]const u8 = null,
     install_dir: std.Build.InstallDir,
 };
@@ -227,13 +227,9 @@ pub fn emccStep(
     }
 
     emcc.addArg("-o");
-    const out_file = out_file: {
-        if (options.out_file_name) |out_file_name| {
-            break :out_file emcc.addOutputFileArg(out_file_name);
-        } else {
-            break :out_file emcc.addOutputFileArg(b.fmt("{s}.html", .{wasm.name}));
-        }
-    };
+    const out_file = emcc.addOutputFileArg(
+        options.out_file_name orelse b.fmt("{s}.html", .{wasm.name}),
+    );
 
     if (options.use_preload_plugins) {
         emcc.addArg("--use-preload-plugins");
@@ -271,6 +267,12 @@ pub fn emccStep(
         emcc.addArg("--shell-file");
         emcc.addFileArg(shell_file_path);
         emcc.addFileInput(shell_file_path);
+    }
+
+    if (options.js_library_path) |js_library_path| {
+        emcc.addArg("--js-library");
+        emcc.addFileArg(js_library_path);
+        emcc.addFileInput(js_library_path);
     }
 
     const install_step = b.addInstallDirectory(.{
