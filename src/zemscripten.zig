@@ -111,9 +111,8 @@ pub const EmmallocAllocator = struct {
     ) ?[*]u8 {
         _ = ctx;
         _ = return_address;
-        const ptr_align: u32 = @as(u32, 1) << @intCast(@intFromEnum(ptr_align_log2));
-        if (!std.math.isPowerOfTwo(ptr_align)) unreachable;
-        const ptr = emmalloc_memalign(ptr_align, @intCast(len)) orelse return null;
+        const ptr_align = ptr_align_log2.toByteUnits();
+        const ptr = emmalloc_memalign(@intCast(ptr_align), @intCast(len)) orelse return null;
         return @ptrCast(ptr);
     }
 
