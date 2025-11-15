@@ -182,13 +182,16 @@ pub const StepOptions = struct {
     preload_paths: ?[]const EmccFilePath = null,
     shell_file_path: ?std.Build.LazyPath = null,
     js_library_path: ?std.Build.LazyPath = null,
-    out_file_name: ?[]const u8 = null,
+    out_file_name: []const u8,
     install_dir: std.Build.InstallDir,
 };
 
 pub fn emccStep(
     b: *std.Build,
-    wasm: *std.Build.Step.Compile,
+    src_path_or_compile_step: union(enum) {
+        src_path: std.Build.LazyPath,
+        compile_step: *std.Build.Step.Compile,
+    },
     options: StepOptions,
 ) *std.Build.Step {
     var emcc = b.addSystemCommand(&.{emccPath(b)});
@@ -207,29 +210,32 @@ pub fn emccStep(
         ) catch unreachable);
     }
 
-    emcc.addArtifactArg(wasm);
-    {
-        for (wasm.root_module.getGraph().modules) |module| {
-            for (module.link_objects.items) |link_object| {
-                switch (link_object) {
-                    .other_step => |compile_step| {
-                        switch (compile_step.kind) {
-                            .lib => {
-                                emcc.addArtifactArg(compile_step);
-                            },
-                            else => {},
-                        }
-                    },
-                    else => {},
+    switch (src_path_or_compile_step) {
+        .src_path => |src_path| {
+            emcc.addArg(src_path.getPath(b));
+        },
+        .compile_step => |compile_step| {
+            emcc.addArtifactArg(compile_step);
+            for (compile_step.root_module.getGraph().modules) |module| {
+                for (module.link_objects.items) |link_object| {
+                    switch (link_object) {
+                        .other_step => |linked_compile_step| {
+                            switch (linked_compile_step.kind) {
+                                .lib => {
+                                    emcc.addArtifactArg(linked_compile_step);
+                                },
+                                else => {},
+                            }
+                        },
+                        else => {},
+                    }
                 }
             }
-        }
+        },
     }
 
     emcc.addArg("-o");
-    const out_file = emcc.addOutputFileArg(
-        options.out_file_name orelse b.fmt("{s}.html", .{wasm.name}),
-    );
+    const out_file = emcc.addOutputFileArg(options.out_file_name);
 
     if (options.use_preload_plugins) {
         emcc.addArg("--use-preload-plugins");
