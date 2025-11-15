@@ -26,17 +26,20 @@ Add zemscripten's "root" module to your wasm compile target., then create an `em
     const zemscripten = b.dependency("zemscripten", .{});
     wasm.root_module.addImport("zemscripten", zemscripten.module("root"));
 
-    const emcc_flags = @import("zemscripten").emccDefaultFlags(b.allocator, optimize);
+    const emcc_flags = @import("zemscripten").emccDefaultFlags(b.allocator, .{
+        .optimize = optimize,
+        .fsanitize = false,
+    });
 
     var emcc_settings = @import("zemscripten").emccDefaultSettings(b.allocator, .{
         .optimize = optimize,
+        .emsdk_allocator = .emmalloc,
     });
-
     try emcc_settings.put("ALLOW_MEMORY_GROWTH", "1");
 
     const emcc_step = @import("zemscripten").emccStep(
         b,
-        wasm,
+        .{ .compile_step = wasm },
         .{
             .optimize = optimize,
             .flags = emcc_flags,
