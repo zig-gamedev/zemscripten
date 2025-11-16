@@ -167,9 +167,19 @@ pub fn emccDefaultSettings(allocator: std.mem.Allocator, options: EmccDefaultSet
     return settings;
 }
 
-pub const EmccFilePath = struct {
-    src_path: []const u8,
+pub const ResourceFile = struct {
+    src_path: std.Build.LazyPath,
     virtual_path: ?[]const u8 = null,
+
+    pub fn get(self: ResourceFile, b: *std.Build) []const u8 {
+        return if (self.virtual_path) |virtual_path|
+            b.fmt(
+                "{s}@{s}",
+                .{ self.src_path.getPath(b), virtual_path },
+            )
+        else
+            self.src_path.getPath(b);
+    }
 };
 
 pub const StepOptions = struct {
@@ -177,8 +187,8 @@ pub const StepOptions = struct {
     flags: EmccFlags,
     settings: EmccSettings,
     use_preload_plugins: bool = false,
-    embed_paths: ?[]const EmccFilePath = null,
-    preload_paths: ?[]const EmccFilePath = null,
+    embed_paths: ?[]const ResourceFile = null,
+    preload_paths: ?[]const ResourceFile = null,
     shell_file_path: ?std.Build.LazyPath = null,
     js_library_path: ?std.Build.LazyPath = null,
     out_file_name: []const u8,
@@ -187,7 +197,7 @@ pub const StepOptions = struct {
 
 pub fn emccStep(
     b: *std.Build,
-    src_paths: []const []const u8,
+    src_paths: []const std.Build.LazyPath,
     compile_steps: []const *std.Build.Step.Compile,
     options: StepOptions,
 ) *std.Build.Step {
@@ -208,7 +218,7 @@ pub fn emccStep(
     }
 
     for (src_paths) |src_path| {
-        emcc.addArg(src_path);
+        emcc.addFileArg(src_path);
     }
 
     for (compile_steps) |compile_step| {
@@ -239,42 +249,26 @@ pub fn emccStep(
 
     if (options.embed_paths) |embed_paths| {
         for (embed_paths) |path| {
-            const path_arg = if (path.virtual_path) |virtual_path|
-                std.fmt.allocPrint(
-                    b.allocator,
-                    "{s}@{s}",
-                    .{ path.src_path, virtual_path },
-                ) catch unreachable
-            else
-                path.src_path;
-            emcc.addArgs(&.{ "--embed-file", path_arg });
+            emcc.addArg("--embed-file");
+            emcc.addFileArg(path.src_path);
         }
     }
 
     if (options.preload_paths) |preload_paths| {
         for (preload_paths) |path| {
-            const path_arg = if (path.virtual_path) |virtual_path|
-                std.fmt.allocPrint(
-                    b.allocator,
-                    "{s}@{s}",
-                    .{ path.src_path, virtual_path },
-                ) catch unreachable
-            else
-                path.src_path;
-            emcc.addArgs(&.{ "--preload-file", path_arg });
+            emcc.addArg("--preload-file");
+            emcc.addFileArg(path.src_path);
         }
     }
 
     if (options.shell_file_path) |shell_file_path| {
         emcc.addArg("--shell-file");
         emcc.addFileArg(shell_file_path);
-        emcc.addFileInput(shell_file_path);
     }
 
     if (options.js_library_path) |js_library_path| {
         emcc.addArg("--js-library");
         emcc.addFileArg(js_library_path);
-        emcc.addFileInput(js_library_path);
     }
 
     const install_step = b.addInstallDirectory(.{

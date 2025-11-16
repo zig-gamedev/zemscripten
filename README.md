@@ -48,9 +48,10 @@ Add zemscripten's "root" module to your wasm compile target., then create an `em
             .use_preload_plugins = true,
             .embed_paths = &.{},
             .preload_paths = &.{},
+            .shell_file_path = null, // set this to override the default html shell
+            .js_library_path = null,
             .out_file_name = null, // emcc output arg will default to {wasm.name}.html if unset
             .install_dir = .{ .custom = "web" },
-            .shell_file_path = null, // set this to override the default html shell
         },
     );
     emcc_step.dependOn(activate_emsdk_step);
