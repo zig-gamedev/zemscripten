@@ -3,7 +3,7 @@ const std = @import("std");
 
 pub const emsdk_ver_major = "4";
 pub const emsdk_ver_minor = "0";
-pub const emsdk_ver_tiny = "3";
+pub const emsdk_ver_tiny = "19";
 pub const emsdk_version = emsdk_ver_major ++ "." ++ emsdk_ver_minor ++ "." ++ emsdk_ver_tiny;
 
 pub fn build(b: *std.Build) void {
@@ -15,10 +15,7 @@ pub fn emccPath(b: *std.Build) []const u8 {
         b.dependency("emsdk", .{}).path("").getPath(b),
         "upstream",
         "emscripten",
-        switch (builtin.target.os.tag) {
-            .windows => "emcc.bat",
-            else => "emcc",
-        },
+        "emcc.py",
     }) catch unreachable;
 }
 
@@ -53,7 +50,10 @@ pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
         },
     }) catch unreachable;
 
+    var emsdk_update = b.addSystemCommand(&.{ emsdk_script_path, "update" });
+
     var emsdk_install = b.addSystemCommand(&.{ emsdk_script_path, "install", emsdk_version });
+    emsdk_install.step.dependOn(&emsdk_update.step);
 
     switch (builtin.target.os.tag) {
         .linux, .macos => {
@@ -80,11 +80,11 @@ pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
 
     switch (builtin.target.os.tag) {
         .linux, .macos => {
-            const chmod_emcc = b.addSystemCommand(&.{ "chmod", "+x", emccPath(b) });
+            const chmod_emcc = b.addSystemCommand(&.{ "chmod", "a+x", emccPath(b) });
             chmod_emcc.step.dependOn(&emsdk_activate.step);
             step.dependOn(&chmod_emcc.step);
 
-            const chmod_emrun = b.addSystemCommand(&.{ "chmod", "+x", emrunPath(b) });
+            const chmod_emrun = b.addSystemCommand(&.{ "chmod", "a+x", emrunPath(b) });
             chmod_emrun.step.dependOn(&emsdk_activate.step);
             step.dependOn(&chmod_emrun.step);
         },
@@ -163,7 +163,6 @@ pub fn emccDefaultSettings(allocator: std.mem.Allocator, options: EmccDefaultSet
         },
         else => {},
     }
-    settings.put("USE_OFFSET_CONVERTER", "1") catch unreachable;
     settings.put("MALLOC", @tagName(options.emsdk_allocator)) catch unreachable;
     return settings;
 }
