@@ -39,7 +39,8 @@ Add zemscripten's "root" module to your wasm compile target., then create an `em
 
     const emcc_step = @import("zemscripten").emccStep(
         b,
-        .{ .compile_step = wasm },
+        &.{ }, // src file paths 
+        &.{ wasm }, // src compile steps
         .{
             .optimize = optimize,
             .flags = emcc_flags,
@@ -49,29 +50,12 @@ Add zemscripten's "root" module to your wasm compile target., then create an `em
             .preload_paths = &.{},
             .out_file_name = null, // emcc output arg will default to {wasm.name}.html if unset
             .install_dir = .{ .custom = "web" },
+            .shell_file_path = null, // set this to override the default html shell
         },
     );
     emcc_step.dependOn(activate_emsdk_step);
 
     b.getInstallStep().dependOn(emcc_step);
-```
-
-To use a custom html file emccStep() accepts a shell_file_path option:
-```zig
-    const emcc_step = @import("zemscripten").emccStep(
-        b,
-        wasm,
-        .{
-            .optimize = optimize,
-            .flags = emcc_flags,
-            .settings = emcc_settings,
-            .use_preload_plugins = true,
-            .embed_paths = &.{},
-            .preload_paths = &.{},
-            .install_dir = .{ .custom = "web" },
-            .shell_file_path = b.path("path/to/file"),
-        },
-    );
 ```
 
 Now you can use the provided Zig panic and log overrides in your wasm's root module and define the entry point that invoked by the js output of `emcc` (by default it looks for a symbol named `main`). For example:

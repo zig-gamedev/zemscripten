@@ -187,10 +187,8 @@ pub const StepOptions = struct {
 
 pub fn emccStep(
     b: *std.Build,
-    src_path_or_compile_step: union(enum) {
-        src_path: std.Build.LazyPath,
-        compile_step: *std.Build.Step.Compile,
-    },
+    src_paths: []const []const u8,
+    compile_steps: []const *std.Build.Step.Compile,
     options: StepOptions,
 ) *std.Build.Step {
     var emcc = b.addSystemCommand(&.{emccPath(b)});
@@ -209,28 +207,27 @@ pub fn emccStep(
         ) catch unreachable);
     }
 
-    switch (src_path_or_compile_step) {
-        .src_path => |src_path| {
-            emcc.addArg(src_path.getPath(b));
-        },
-        .compile_step => |compile_step| {
-            emcc.addArtifactArg(compile_step);
-            for (compile_step.root_module.getGraph().modules) |module| {
-                for (module.link_objects.items) |link_object| {
-                    switch (link_object) {
-                        .other_step => |linked_compile_step| {
-                            switch (linked_compile_step.kind) {
-                                .lib => {
-                                    emcc.addArtifactArg(linked_compile_step);
-                                },
-                                else => {},
-                            }
-                        },
-                        else => {},
-                    }
+    for (src_paths) |src_path| {
+        emcc.addArg(src_path);
+    }
+
+    for (compile_steps) |compile_step| {
+        emcc.addArtifactArg(compile_step);
+        for (compile_step.root_module.getGraph().modules) |module| {
+            for (module.link_objects.items) |link_object| {
+                switch (link_object) {
+                    .other_step => |linked_compile_step| {
+                        switch (linked_compile_step.kind) {
+                            .lib => {
+                                emcc.addArtifactArg(linked_compile_step);
+                            },
+                            else => {},
+                        }
+                    },
+                    else => {},
                 }
             }
-        },
+        }
     }
 
     emcc.addArg("-o");
