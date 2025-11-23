@@ -1,29 +1,34 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-pub const emsdk_ver_major = "4";
-pub const emsdk_ver_minor = "0";
-pub const emsdk_ver_tiny = "3";
-pub const emsdk_version = emsdk_ver_major ++ "." ++ emsdk_ver_minor ++ "." ++ emsdk_ver_tiny;
-
 pub fn build(b: *std.Build) void {
     _ = b.addModule("root", .{ .root_source_file = b.path("src/zemscripten.zig") });
+    const passthrough = b.addExecutable(
+        .{
+            .name = "passthrough",
+            .root_module = b.createModule(.{
+                .root_source_file = b.path("src/passthrough.zig"),
+                .target = b.graph.host,
+                .optimize = .ReleaseFast,
+            }),
+        },
+    );
+    b.installArtifact(passthrough);
 }
 
-pub fn emccPath(b: *std.Build) []const u8 {
-    return std.fs.path.join(b.allocator, &.{
-        b.dependency("emsdk", .{}).path("").getPath(b),
+pub fn emccPath(b: *std.Build, emsdk: Emsdk) std.Build.LazyPath {
+    return emsdk.emsdk_dir.path(b, b.pathJoin(&.{
         "upstream",
         "emscripten",
         switch (builtin.target.os.tag) {
             .windows => "emcc.bat",
             else => "emcc",
         },
-    }) catch unreachable;
+    }));
 }
 
-pub fn emrunPath(b: *std.Build) []const u8 {
-    return std.fs.path.join(b.allocator, &.{
+pub fn emrunPath(b: *std.Build, emsdk: Emsdk) std.Build.LazyPath {
+    return emsdk.emsdk_dir.path(b, b.pathJoin(&.{
         b.dependency("emsdk", .{}).path("").getPath(b),
         "upstream",
         "emscripten",
@@ -31,76 +36,59 @@ pub fn emrunPath(b: *std.Build) []const u8 {
             .windows => "emrun.bat",
             else => "emrun",
         },
-    }) catch unreachable;
+    }));
 }
 
-pub fn htmlPath(b: *std.Build) []const u8 {
-    return std.fs.path.join(b.allocator, &.{
+pub fn htmlPath(b: *std.Build, emsdk: Emsdk) std.Build.LazyPath {
+    return emsdk.emsdk_dir.path(b, b.pathJoin(&.{
         b.dependency("emsdk", .{}).path("").getPath(b),
         "upstream",
         "emscripten",
         "src",
         "shell.html",
-    }) catch unreachable;
+    }));
 }
 
-pub fn activateEmsdkStep(b: *std.Build) *std.Build.Step {
-    const emsdk_script_path = std.fs.path.join(b.allocator, &.{
-        b.dependency("emsdk", .{}).path("").getPath(b),
-        switch (builtin.target.os.tag) {
-            .windows => "emsdk.bat",
-            else => "emsdk",
-        },
-    }) catch unreachable;
+const ActivateEmsdkOptions = struct {
+    emsdk: *std.Build.Dependency,
+    zemscripten: *std.Build.Dependency,
+    sdk_version: ?[]const u8 = null,
+};
 
-    var emsdk_install = b.addSystemCommand(&.{ emsdk_script_path, "install", emsdk_version });
+const Emsdk = struct {
+    zemscripten: *std.Build.Dependency,
+    step: *std.Build.Step,
+    emsdk_dir: std.Build.LazyPath,
+};
 
-    switch (builtin.target.os.tag) {
-        .linux, .macos => {
-            emsdk_install.step.dependOn(&b.addSystemCommand(&.{ "chmod", "+x", emsdk_script_path }).step);
-        },
-        .windows => {
-            emsdk_install.step.dependOn(&b.addSystemCommand(&.{ "takeown", "/f", emsdk_script_path }).step);
-        },
-        else => {},
-    }
+pub fn activateEmsdkStep(
+    b: *std.Build,
+    options: ActivateEmsdkOptions,
+) Emsdk {
+    const version = options.sdk_version orelse "4.0.19";
 
-    var emsdk_activate = b.addSystemCommand(&.{ emsdk_script_path, "activate", emsdk_version });
-    emsdk_activate.step.dependOn(&emsdk_install.step);
-
-    const step = b.allocator.create(std.Build.Step) catch unreachable;
-    step.* = std.Build.Step.init(.{
-        .id = .custom,
-        .name = "Activate EMSDK",
-        .owner = b,
-        .makeFn = &struct {
-            fn make(_: *std.Build.Step, _: std.Build.Step.MakeOptions) anyerror!void {}
-        }.make,
+    const emsdk_installer = b.addExecutable(.{
+        .name = "invoker",
+        .root_module = b.createModule(.{
+            .target = b.graph.host,
+            .optimize = .ReleaseSafe,
+            .root_source_file = options.zemscripten.path("src/emsdk_installer.zig"),
+        }),
     });
 
-    switch (builtin.target.os.tag) {
-        .linux, .macos => {
-            const chmod_emcc = b.addSystemCommand(&.{ "chmod", "+x", emccPath(b) });
-            chmod_emcc.step.dependOn(&emsdk_activate.step);
-            step.dependOn(&chmod_emcc.step);
+    const emsdk_script_path = options.emsdk.path("").join(b.allocator, switch (builtin.target.os.tag) {
+        .windows => "emsdk.bat",
+        else => "emsdk",
+    }) catch unreachable;
 
-            const chmod_emrun = b.addSystemCommand(&.{ "chmod", "+x", emrunPath(b) });
-            chmod_emrun.step.dependOn(&emsdk_activate.step);
-            step.dependOn(&chmod_emrun.step);
-        },
-        .windows => {
-            const takeown_emcc = b.addSystemCommand(&.{ "takeown", "/f", emccPath(b) });
-            takeown_emcc.step.dependOn(&emsdk_activate.step);
-            step.dependOn(&takeown_emcc.step);
-
-            const takeown_emrun = b.addSystemCommand(&.{ "takeown", "/f", emrunPath(b) });
-            takeown_emrun.step.dependOn(&emsdk_activate.step);
-            step.dependOn(&takeown_emrun.step);
-        },
-        else => {},
-    }
-
-    return step;
+    const activate_and_install_step = b.addRunArtifact(emsdk_installer);
+    activate_and_install_step.addFileArg(emsdk_script_path);
+    activate_and_install_step.addArg(version);
+    return .{
+        .step = &activate_and_install_step.step,
+        .emsdk_dir = activate_and_install_step.addOutputDirectoryArg("emsdk"),
+        .zemscripten = options.zemscripten,
+    };
 }
 
 pub const EmccFlags = std.StringHashMap(void);
@@ -163,7 +151,6 @@ pub fn emccDefaultSettings(allocator: std.mem.Allocator, options: EmccDefaultSet
         },
         else => {},
     }
-    settings.put("USE_OFFSET_CONVERTER", "1") catch unreachable;
     settings.put("MALLOC", @tagName(options.emsdk_allocator)) catch unreachable;
     return settings;
 }
@@ -186,12 +173,36 @@ pub const StepOptions = struct {
     install_dir: std.Build.InstallDir,
 };
 
+fn addAllLinkedArtifacts(b: *std.Build, emcc: *std.Build.Step.Run, root_module: *std.Build.Module) void {
+    for (root_module.getGraph().modules) |module| {
+        for (module.link_objects.items) |link_object| {
+            switch (link_object) {
+                .other_step => |compile_step| {
+                    switch (compile_step.kind) {
+                        .lib => {
+                            emcc.addArtifactArg(compile_step);
+                            addAllLinkedArtifacts(b, emcc, compile_step.root_module);
+                        },
+                        else => {},
+                    }
+                },
+                .static_path => |static_path| {
+                    emcc.addFileArg(static_path);
+                },
+                else => {},
+            }
+        }
+    }
+}
+
 pub fn emccStep(
     b: *std.Build,
+    emsdk: Emsdk,
     wasm: *std.Build.Step.Compile,
     options: StepOptions,
 ) *std.Build.Step {
-    var emcc = b.addSystemCommand(&.{emccPath(b)});
+    var emcc = b.addRunArtifact(emsdk.zemscripten.artifact("passthrough"));
+    emcc.addFileArg(emccPath(b, emsdk));
 
     var iterFlags = options.flags.iterator();
     while (iterFlags.next()) |kvp| {
@@ -209,21 +220,7 @@ pub fn emccStep(
 
     emcc.addArtifactArg(wasm);
     {
-        for (wasm.root_module.getGraph().modules) |module| {
-            for (module.link_objects.items) |link_object| {
-                switch (link_object) {
-                    .other_step => |compile_step| {
-                        switch (compile_step.kind) {
-                            .lib => {
-                                emcc.addArtifactArg(compile_step);
-                            },
-                            else => {},
-                        }
-                    },
-                    else => {},
-                }
-            }
-        }
+        addAllLinkedArtifacts(b, emcc, wasm.root_module);
     }
 
     emcc.addArg("-o");
@@ -287,13 +284,15 @@ pub fn emccStep(
 
 pub fn emrunStep(
     b: *std.Build,
+    emsdk: Emsdk,
     html_path: []const u8,
     extra_args: []const []const u8,
 ) *std.Build.Step {
-    var emrun = b.addSystemCommand(&.{emrunPath(b)});
+    var emrun = b.addRunArtifact(emsdk.zemscripten.artifact("passthrough"));
+    emrun.addFileArg(emrunPath(b, emsdk));
+
     emrun.addArgs(extra_args);
     emrun.addArg(html_path);
-    // emrun.addArg("--");
 
     return &emrun.step;
 }
