@@ -250,14 +250,16 @@ pub fn emccStep(
     if (options.embed_paths) |embed_paths| {
         for (embed_paths) |path| {
             emcc.addArg("--embed-file");
-            emcc.addFileArg(path.src_path);
+            emcc.addArg(path.get(b));
+            path.src_path.addStepDependencies(&emcc.step);
         }
     }
 
     if (options.preload_paths) |preload_paths| {
         for (preload_paths) |path| {
             emcc.addArg("--preload-file");
-            emcc.addFileArg(path.src_path);
+            emcc.addArg(path.get(b));
+            path.src_path.addStepDependencies(&emcc.step);
         }
     }
 
