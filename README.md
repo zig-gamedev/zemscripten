@@ -5,22 +5,29 @@ Zig build package and shims for [Emscripten](https://emscripten.org) emsdk
 ## How to use it
 
 Add `zemscripten` and (optionally) `emsdk` to your build.zig.zon dependencies
+
 ```sh
     zig fetch --save=emsdk https://github.com/emscripten-core/emsdk/archive/refs/tags/4.0.3.tar.gz
 ```
 
 Emsdk must be activated before it can be used. You can use `activateEmsdkStep` to create a build step for that:
+
 ```zig
     const activate_emsdk_step = @import("zemscripten").activateEmsdkStep(b);
 ```
 
 Add zemscripten's "root" module to your wasm compile target., then create an `emcc` build step. We use zemscripten's default flags and settings which can be overridden for your project specific requirements. Refer to the [emcc documentation](https://emscripten.org/docs/tools_reference/emcc.html). Example build.zig code:
+
 ```zig
-    const wasm = b.addStaticLibrary(.{
+    const wasm = b.addLibrary(.{
+        .linkage = .static,
         .name = "MyGame",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.addModule("mygame", .{
+            .link_libc = true,
+            .target = target,
+            .optimize = optimize,
+            .root_source_file = b.path("src/main.zig"),
+        }),
     });
 
     const zemscripten = b.dependency("zemscripten", .{});
@@ -60,6 +67,7 @@ Add zemscripten's "root" module to your wasm compile target., then create an `em
 ```
 
 Now you can use the provided Zig panic and log overrides in your wasm's root module and define the entry point that invoked by the js output of `emcc` (by default it looks for a symbol named `main`). For example:
+
 ```zig
 const std = @import("std");
 
@@ -77,6 +85,7 @@ export fn main() c_int {
 ```
 
 You can also define a run step that invokes `emrun`. This will serve the html locally over HTTP and try to open it using your default browser. Example build.zig code:
+
 ```zig
     const html_filename = try std.fmt.allocPrint(b.allocator, "{s}.html", .{wasm.name});
 
@@ -91,4 +100,5 @@ You can also define a run step that invokes `emrun`. This will serve the html lo
 
     b.step("emrun", "Build and open the web app locally using emrun").dependOn(emrun_step);
 ```
+
 See the [emrun documentation](https://emscripten.org/docs/compiling/Running-html-files-with-emrun.html) for the difference args that can be used.
