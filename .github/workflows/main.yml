@@ -26,4 +26,4 @@ jobs:
         continue-on-error: true
         run: zig fmt --check .
       - name: Build
-        run: zig build
+        run: zig build check

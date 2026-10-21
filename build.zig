@@ -7,7 +7,20 @@ pub const emsdk_ver_tiny = "19";
 pub const emsdk_version = emsdk_ver_major ++ "." ++ emsdk_ver_minor ++ "." ++ emsdk_ver_tiny;
 
 pub fn build(b: *std.Build) void {
-    _ = b.addModule("root", .{ .root_source_file = b.path("src/zemscripten.zig") });
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const module = b.addModule("root", .{
+        .root_source_file = b.path("src/zemscripten.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    // Minimal contained compile check
+    b.step("check", "Check that zemscripten's root module compiles").dependOn(&b.addObject(.{
+        .name = "zemscripten-check",
+        .root_module = module,
+    }).step);
 }
 
 pub fn emccPath(b: *std.Build) []const u8 {
