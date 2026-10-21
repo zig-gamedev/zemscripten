@@ -3,7 +3,7 @@
 const std = @import("std");
 
 comptime {
-    _ = std.testing.refAllDeclsRecursive(@This());
+    _ = std.testing.refAllDecls(@This());
 }
 
 pub extern fn emscripten_sleep(ms: u32) void;
